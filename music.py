@@ -2,19 +2,7 @@ import mido
 import numpy as np
 import soundfile as sf
 import random
-
-# Define several melodic and rhythmic patterns for variety
-MELODIC_PATTERNS = [
-    [0, 2, 4, 5, 7, 5, 4, 2],  # Ascend and descend
-    [0, 4, 7, 4, 0, 4, 7, 12], # Arpeggio
-    [0, 2, 0, 5, 4, 2, 0, 7],  # Motif with repetition
-    [0, 3, 5, 7, 5, 3, 0, 12], # Minor flavor
-]
-RHYTHM_PATTERNS = [
-    [240, 240, 240, 240, 240, 240, 240, 240],
-    [120, 360, 120, 360, 120, 360, 120, 360],
-    [180, 180, 360, 180, 180, 360, 180, 180],
-]
+from patterns import MELODIC_PATTERNS, RHYTHM_PATTERNS
 
 SECTION_ORDER = ['intro', 'main', 'main', 'main', 'outro']
 
@@ -33,8 +21,19 @@ def generate_scale(key: str, is_minor: bool = False, octave: int = 4):
 def select_pattern(scale):
     melodic = random.choice(MELODIC_PATTERNS)
     rhythm = random.choice(RHYTHM_PATTERNS)
+    # Ensure the melodic pattern is half the length of the rhythm pattern (since rhythm alternates note/rest)
+    if len(rhythm) // 2 != len(melodic):
+        # Truncate or repeat melodic pattern to fit
+        melodic = (melodic * ((len(rhythm) // 2 + len(melodic) - 1) // len(melodic)))[:len(rhythm)//2]
     notes = [scale[n % len(scale)] + (12 if n >= len(scale) else 0) for n in melodic]
-    return list(zip(notes, rhythm))
+    # Pair each note with its note duration and following rest duration
+    pattern = []
+    for i, note in enumerate(notes):
+        note_duration = rhythm[2*i]
+        rest_duration = rhythm[2*i+1]
+        pattern.append((note, note_duration))
+        pattern.append((None, rest_duration))
+    return pattern
 
 def generate_song_structure(key: str, octave: int):
     is_minor = 'm' in key
@@ -56,9 +55,17 @@ def generate_music(tempo: int, key: str, style: str, filename: str, octave: int 
     program = 80 if style == '8bit' else 81
     track.append(mido.Message('program_change', program=program, time=0))
     song = generate_song_structure(key, octave)
+    last_note = None
     for note, duration in song:
-        track.append(mido.Message('note_on', note=note, velocity=100, time=0))
-        track.append(mido.Message('note_off', note=note, velocity=100, time=duration))
+        if note is not None:
+            track.append(mido.Message('note_on', note=note, velocity=100, time=0))
+            track.append(mido.Message('note_off', note=note, velocity=100, time=duration))
+            last_note = note
+        else:
+            # Rest: advance time only if duration > 0
+            if duration > 0:
+                # Use last_note or 0 for dummy note_off
+                track.append(mido.Message('note_off', note=last_note if last_note is not None else 0, velocity=0, time=duration))
     mid.save(filename if filename.endswith('.mid') else filename + '.mid')
     print(f"[MIDI] Pattern-based MIDI file written to {filename if filename.endswith('.mid') else filename + '.mid'}")
 
