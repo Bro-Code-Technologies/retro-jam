@@ -4,8 +4,6 @@ import soundfile as sf
 import random
 from patterns import MELODIC_PATTERNS, RHYTHM_PATTERNS
 
-SECTION_ORDER = ['intro', 'main', 'main', 'main', 'outro']
-
 SECTION_LENGTHS = {
     'intro': 4,
     'main': 8,
@@ -35,16 +33,17 @@ def select_pattern(scale):
         pattern.append((None, rest_duration))
     return pattern
 
-def generate_song_structure(key: str, octave: int):
+def generate_song_structure(key: str, octave: int, repeat: int = 3):
     is_minor = 'm' in key
     scale = generate_scale(key, is_minor, octave)
     song = []
-    for section in SECTION_ORDER:
+    section_order = ["intro"] + ["main"] * repeat + ["outro"]
+    for section in section_order:
         for _ in range(SECTION_LENGTHS[section] // len(MELODIC_PATTERNS[0])):
             song.extend(select_pattern(scale))
     return song
 
-def generate_music(tempo: int, key: str, style: str, filename: str, octave: int = 4):
+def generate_music(tempo: int, key: str, style: str, filename: str, octave: int = 4, repeat: int = 3):
     print(f"[PATTERN] Generating {style} music: tempo={tempo}, key={key}, octave={octave}, filename={filename}")
     mid = mido.MidiFile()
     track = mido.MidiTrack()
@@ -54,7 +53,7 @@ def generate_music(tempo: int, key: str, style: str, filename: str, octave: int 
     track.append(mido.MetaMessage('set_tempo', tempo=microseconds_per_beat))
     program = 80 if style == '8bit' else 81
     track.append(mido.Message('program_change', program=program, time=0))
-    song = generate_song_structure(key, octave)
+    song = generate_song_structure(key, octave, repeat)
     last_note = None
     for note, duration in song:
         if note is not None:

@@ -15,6 +15,7 @@ def main():
     generate_parser.add_argument("-style", "--style", type=str, choices=["8bit", "16bit"], default="8bit", help="Musical style (8bit or 16bit)")
     generate_parser.add_argument("-filename", "--filename", type=str, default="output", help="Output file name")
     generate_parser.add_argument("-octave", "--octave", type=int, choices=[1, 2, 3, 4, 5, 6], default=4, help="Octave for melody (1=lowest, 6=highest)")
+    generate_parser.add_argument("-repeat", "--repeat", type=int, default=3, help="Number of times to repeat the main section (default: 3)")
 
     # Waveform command
     wave_parser = subparsers.add_parser("wave", help="Generate a simple retro waveform as a WAV file")
@@ -30,7 +31,8 @@ def main():
             key=args.key,
             style=args.style,
             filename=args.filename,
-            octave=args.octave
+            octave=args.octave,
+            repeat=args.repeat
         )
 
     if args.command == "wave":
